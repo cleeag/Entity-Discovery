@@ -20,7 +20,7 @@ if __name__ == "__main__":
         pd.build_data()
         # pd.bs_parseer()
 
-        pd.tokenize_data(file=True)
+        pd.tokenize_data(file=None)
         pd.split_data()
 
     elif input_text == 'train':

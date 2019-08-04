@@ -40,8 +40,9 @@ def read_data():
 
 class PreprocessData:
     def __init__(self, ):
-        self.data_dir = "/Users/chin/PycharmProjects/EL/data"
-        self.corpus_dir = join(self.data_dir, "LDC2017E51_TAC_KBP_2017_Evaluation_Core_Source_Corpus/data/")
+        # self.data_dir = "/Users/chin/PycharmProjects/EL/data"
+        self.data_dir = join(os.getcwd(), "data")
+        self.corpus_dir = join(self.data_dir, "LDC2017E51_TAC_KBP_2017_Evaluation_Core_Source_Corpus/data")
         self.label_df = self._read_label()
 
 
@@ -169,7 +170,7 @@ class PreprocessData:
         if file:
             labeled_data = json.load(fp=open(join(self.data_dir, 'labeled_dict.json'), 'r'))
         else:
-            labeled_data = self.labeled_data
+            labeled_data = self.bs_parseer()
         nlp = get_tok()
         with open(join(self.data_dir, 'raw.txt'), 'w') as w:
             label_count = [0, 0]
