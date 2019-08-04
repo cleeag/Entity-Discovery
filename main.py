@@ -14,6 +14,7 @@ if __name__ == "__main__":
     input_text = parser.parse_args().task
 
     # input_text = 'train'
+    data_dir = join(os.getcwd(), 'data')
 
     if input_text == "prep":
         pd = PreprocessData()
@@ -25,7 +26,7 @@ if __name__ == "__main__":
 
     elif input_text == 'train':
         data = Data()
-        data.read_config(join(os.getcwd(), 'data/train_config'))
+        data.read_config(join(data_dir, 'train_config'))
         print("MODEL: train")
         data_initialization(data)
         data.generate_instance('train')
