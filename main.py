@@ -27,6 +27,7 @@ if __name__ == "__main__":
     elif input_text == 'train':
         data = Data()
         data.read_config(join(data_dir, 'train_config'))
+
         print("MODEL: train")
         data_initialization(data)
         data.generate_instance('train')
