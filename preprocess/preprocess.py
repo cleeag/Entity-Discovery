@@ -9,39 +9,15 @@ import json
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 import spacy
-from preprocess.tokenizer import get_tok
+from preprocess.get_tokenizer import get_tok
 from preprocess.helper_functions import clean_nested
-
-def read_label():
-
-    label_path = join(os.getcwd(), "LDC2017E52_TAC_KBP_2017_Entity_Discovery_"
-                                   "and_Linking_Evaluation_Gold_Standard_Entity_Mentions_and_Knowledge_Base_Links"
-                                   "/data/tac_kbp_2017_edl_evaluation_gold_standard_entity_mentions.tab")
-    df = pd.read_csv(label_path, header=None, delimiter='\t')
-    df = df.loc[:,[1, 2, 3]]
-    df = df.rename(columns={
-        1: 'entity_id',
-        2: 'entity',
-        3: 'doc_id'
-    })
-    print(df.head())
-    print(df.loc[3, 'entity'])
-    return df
-
-def read_data():
-    data_dir = join(os.getcwd(), "LDC2017E51_TAC_KBP_2017_Evaluation_Core_Source_Corpus/data/eng/nw")
-    data_dict = {}
-    for file in os.listdir(data_dir):
-        with open(join(data_dir, file), 'r') as f:
-            data_dict[file.split('.')[0]] = f.read()
-    print(data_dict)
-    return data_dict
 
 
 class PreprocessData:
     def __init__(self, ):
         # self.data_dir = "/Users/chin/PycharmProjects/EL/data"
         self.data_dir = join(os.getcwd(), "data")
+        self.processed_data_dir = join(os.getcwd(), 'processed_data', "data")
         self.corpus_dir = join(self.data_dir, "LDC2017E51_TAC_KBP_2017_Evaluation_Core_Source_Corpus/data")
         self.label_df = self._read_label()
 
@@ -108,7 +84,10 @@ class PreprocessData:
     def bs_parseer(self):
         all_sents = []
         nlp = spacy.load('en_core_web_sm')
-        for doc_id, item in tqdm(self.labeled_data.items()):
+        # nlp = get_tok()
+        # nlp = get_tok()
+        # nlp = spacy.load('en_core_web_sm')
+        for doc_id, item in tqdm(self.labeled_data.items(), desc='Parsing XML File'):
             labeled_text = ''
             org_text = item[0]
             end = 0
@@ -139,14 +118,16 @@ class PreprocessData:
             tempt_str = sent
             ents = []
             while re.search('\^ent\^', tempt_str):
+                print('\n')
+                print(tempt_str)
                 span = re.search('\^ent\^', tempt_str).span()
                 tempt_str = tempt_str[:span[0]] + tempt_str[span[1]:]
-                if re.search('\^/ent\^', tempt_str) is None:
+                while re.search('\^/ent\^', tempt_str) is None:
                     tempt_str += ' ' + all_sents[i+1]
                     i += 1
-                    span2 = re.search('\^/ent\^', tempt_str).span()
-                else:
-                    span2 = re.search('\^/ent\^', tempt_str).span()
+                print(tempt_str)
+
+                span2 = re.search('\^/ent\^', tempt_str).span()
                 tempt_str = tempt_str[:span2[0]] + tempt_str[span2[1]:]
                 # print(tempt_str)
                 ent = [span[0], span2[0], 'E']
@@ -172,11 +153,13 @@ class PreprocessData:
         else:
             labeled_data = self.bs_parseer()
         nlp = get_tok()
-        with open(join(self.data_dir, 'raw.txt'), 'w') as w:
+        tokenizer = nlp.tokenizer
+        # nlp = spacy.load('en_core_web_sm')
+        with open(join(self.processed_data_dir, 'raw.txt'), 'w') as w:
             label_count = [0, 0]
-            for item in tqdm(labeled_data):
+            for item in tqdm(labeled_data, desc='tokenization'):
                 # print(doc_id)
-                doc = nlp(item[0])
+                doc = tokenizer(item[0])
 
                 doc_span = []
                 for tok in doc:
@@ -241,7 +224,7 @@ class PreprocessData:
                     if label == 'E':
                         label_count[0] += 1
                     label_count[1] += 1
-                    for tok in nlp(item[0][ent[0]:ent[1]]):
+                    for tok in tokenizer(item[0][ent[0]:ent[1]]):
                         tok_all_ent_span.append([tok.idx, tok.idx+len(tok.text), label])
                         tok_str = item[0][ent[0]:ent[1]][tok.idx:tok.idx+len(tok.text)]
                         if len(tok_str.strip()) < 1:
@@ -249,8 +232,9 @@ class PreprocessData:
                         w.write('\t'.join([tok_str, label]) + '\n')
                 w.write('\n')
             print(label_count)
+
     def split_data(self):
-        with open(join(self.data_dir, 'raw.txt'), 'r') as r:
+        with open(join(self.processed_data_dir, 'raw.txt'), 'r') as r:
             all_data = r.readlines()
 
         tokenized_corpus = []
@@ -264,13 +248,13 @@ class PreprocessData:
 
         random.shuffle(tokenized_corpus)
         split = 0.8
-        with open(join(self.data_dir, 'train.txt'), 'w') as w:
+        with open(join(self.processed_data_dir, 'train.txt'), 'w') as w:
             for tokenized_doc in tokenized_corpus[:int(split * len(tokenized_corpus))]:
                 for tok in tokenized_doc:
                     w.write(tok)
                 w.write('\n')
 
-        with open(join(self.data_dir, 'dev.txt'), 'w') as w:
+        with open(join(self.processed_data_dir, 'dev.txt'), 'w') as w:
             for tokenized_doc in tokenized_corpus[int(split * len(tokenized_corpus)):]:
                 for tok in tokenized_doc:
                     w.write(tok)

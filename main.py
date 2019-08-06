@@ -2,10 +2,7 @@ import argparse
 import os
 from os.path import join
 
-from preprocess.preprocess import PreprocessData
-from preprocess.tokenizer import test_tok
 from utils.data import Data
-from train import data_initialization, train
 
 
 if __name__ == "__main__":
@@ -17,14 +14,18 @@ if __name__ == "__main__":
     data_dir = join(os.getcwd(), 'data')
 
     if input_text == "prep":
+        from preprocess.preprocess import PreprocessData
+
         pd = PreprocessData()
         pd.build_data()
         # pd.bs_parseer()
 
-        pd.tokenize_data(file=None)
+        pd.tokenize_data(file=True)
         pd.split_data()
 
     elif input_text == 'train':
+        from train import data_initialization, train
+
         data = Data()
         data.read_config(join(data_dir, 'train_config'))
 
@@ -37,6 +38,8 @@ if __name__ == "__main__":
         train(data)
 
     elif input_text == "tok":
+        from preprocess.get_tokenizer import test_tok
+
         test_tok()
 
     elif input_text == 'test':
