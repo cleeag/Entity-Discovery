@@ -78,6 +78,7 @@ class PreprocessData:
             else:
                 labeled_data[doc_id][1].append(mention_position + [self.label_df.loc[i, 'entity_id']])
             labeled_data[doc_id][1].sort(key=lambda x:x[0])
+        # print(labeled_data['ENG_NW_001278_20130118_F000138PA'])
         print(total_entities)
         return labeled_data
 
@@ -92,12 +93,19 @@ class PreprocessData:
             org_text = item[0]
             end = 0
 
+            # if doc_id != 'ENG_NW_001278_20130118_F000138PA':
+            #     continue
+            # print(item)
             for ent in item[1]:
+                # print(ent)
                 labeled_text += org_text[end:ent[0]]
                 labeled_text += f"^ent^{org_text[ent[0]:ent[1]]}^/ent^"
                 end = ent[1]
             labeled_text += org_text[end:]
-            # item[0] = labeled_text
+            # if doc_id == 'ENG_NW_001278_20130118_F000138PA':
+            #     print(labeled_text)
+            #     input()
+            item[0] = labeled_text
             soup = BeautifulSoup(labeled_text, 'html.parser')
             for x in soup.find_all(['post', 'text']):
                 for c in x.contents:
@@ -118,20 +126,21 @@ class PreprocessData:
             tempt_str = sent
             ents = []
             while re.search('\^ent\^', tempt_str):
-                print('\n')
-                print(tempt_str)
+                # print('\n')
+                # print(tempt_str)
                 span = re.search('\^ent\^', tempt_str).span()
                 tempt_str = tempt_str[:span[0]] + tempt_str[span[1]:]
                 while re.search('\^/ent\^', tempt_str) is None:
                     tempt_str += ' ' + all_sents[i+1]
                     i += 1
-                print(tempt_str)
+                # print(tempt_str)
 
                 span2 = re.search('\^/ent\^', tempt_str).span()
                 tempt_str = tempt_str[:span2[0]] + tempt_str[span2[1]:]
                 # print(tempt_str)
                 ent = [span[0], span2[0], 'E']
                 ents.append(ent)
+                # print(ents)
             new_labeled_dict.append(
                 [
                     tempt_str,

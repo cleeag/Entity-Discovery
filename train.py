@@ -451,6 +451,8 @@ def train(data):
             print("Save current best model in file:", model_name)
             torch.save(model.state_dict(), model_name)
             best_dev = current_score
+        model_name = data.model_dir + '.' + str(idx) + ".model"
+        torch.save(model.state_dict(), model_name)
         # ## decode test
         # speed, acc, p, r, f, _,_ = evaluate(data, model, "test")
         # test_finish = time.time()

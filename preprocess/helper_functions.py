@@ -80,6 +80,8 @@ def clean_nested(q_dict: dict):
             if cur[1] <= ent_span[i][0]:
                 new_item[1].append(cur)
                 cur = ent_span[i]
+                if i == len(ent_span) - 1:
+                    new_item[1].append(cur)
             elif cur[0] == ent_span[i][0] and cur[1] < ent_span[i][1]:
                 cur = ent_span[i]
 

@@ -88,13 +88,14 @@ class InputExample(object):
 class InputFeatures(object):
     """A single set of features of data."""
 
-    def __init__(self, input_ids, input_mask, segment_ids, label_id, valid_ids=None, label_mask=None):
+    def __init__(self, input_ids, input_mask, segment_ids, label_id, guid, valid_ids=None, label_mask=None):
         self.input_ids = input_ids
         self.input_mask = input_mask
         self.segment_ids = segment_ids
         self.label_id = label_id
         self.valid_ids = valid_ids
         self.label_mask = label_mask
+        self.guid = guid
 
 
 def readfile(filename):
@@ -175,7 +176,7 @@ class NerProcessor(DataProcessor):
         for i, (sentence, label) in enumerate(lines):
             guid = "%s-%s" % (set_type, i)
             text_a = ' '.join(sentence)
-            text_b = None
+            text_b = sentence
             label = label
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
@@ -266,7 +267,8 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
                           segment_ids=segment_ids,
                           label_id=label_ids,
                           valid_ids=valid,
-                          label_mask=label_mask))
+                          label_mask=label_mask,
+                          guid=example.guid))
     return features
 
 
@@ -337,7 +339,7 @@ def main():
                         type=float,
                         help="The initial learning rate for Adam.")
     parser.add_argument("--num_train_epochs",
-                        default=8.0,
+                        default=15.0,
                         type=float,
                         help="Total number of training epochs to perform.")
     parser.add_argument("--warmup_proportion",
@@ -565,59 +567,8 @@ def main():
     model.to(device)
 
     if args.do_eval and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
-        y_true, y_pred = eval(args, processor, label_list, tokenizer, device, model)
 
-        # eval_examples = processor.get_test_examples(args.data_dir)
-        # eval_features = convert_examples_to_features(eval_examples, label_list, args.max_seq_length, tokenizer)
-        # logger.info("***** Running evaluation *****")
-        # logger.info("  Num examples = %d", len(eval_examples))
-        # logger.info("  Batch size = %d", args.eval_batch_size)
-        # all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
-        # all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
-        # all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-        # all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
-        # all_valid_ids = torch.tensor([f.valid_ids for f in eval_features], dtype=torch.long)
-        # all_lmask_ids = torch.tensor([f.label_mask for f in eval_features], dtype=torch.long)
-        # eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_valid_ids,
-        #                           all_lmask_ids)
-        # # Run prediction for full data
-        # eval_sampler = SequentialSampler(eval_data)
-        # eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
-        # model.eval()
-        # eval_loss, eval_accuracy = 0, 0
-        # nb_eval_steps, nb_eval_examples = 0, 0
-        # y_true = []
-        # y_pred = []
-        # label_map = {i: label for i, label in enumerate(label_list, 1)}
-        # for input_ids, input_mask, segment_ids, label_ids, valid_ids, l_mask in tqdm(eval_dataloader,
-        #                                                                              desc="Evaluating"):
-        #     input_ids = input_ids.to(device)
-        #     input_mask = input_mask.to(device)
-        #     segment_ids = segment_ids.to(device)
-        #     valid_ids = valid_ids.to(device)
-        #     label_ids = label_ids.to(device)
-        #     l_mask = l_mask.to(device)
-        #
-        #     with torch.no_grad():
-        #         logits = model(input_ids, segment_ids, input_mask, valid_ids=valid_ids, attention_mask_label=l_mask)
-        #
-        #     logits = torch.argmax(F.log_softmax(logits, dim=2), dim=2)
-        #     logits = logits.detach().cpu().numpy()
-        #     label_ids = label_ids.to('cpu').numpy()
-        #     input_mask = input_mask.to('cpu').numpy()
-        #     for i, label in enumerate(label_ids):
-        #         temp_1 = []
-        #         temp_2 = []
-        #         for j, m in enumerate(label):
-        #             if j == 0:
-        #                 continue
-        #             elif label_ids[i][j] == 4:
-        #                 y_true.append(temp_1)
-        #                 y_pred.append(temp_2)
-        #                 break
-        #             else:
-        #                 temp_1.append(label_map[label_ids[i][j]])
-        #                 temp_2.append(label_map[logits[i][j]])
+        y_true, y_pred = eval(args, processor, label_list, tokenizer, device, model, print_out=True)
 
         report = classification_report(y_true, y_pred, digits=4)
         logger.info("\n%s", report)
@@ -627,7 +578,7 @@ def main():
             logger.info("\n%s", report)
             writer.write(report)
 
-def eval(args, processor, label_list, tokenizer, device, model):
+def eval(args, processor, label_list, tokenizer, device, model, print_out=False):
     eval_examples = processor.get_test_examples(args.data_dir)
     eval_features = convert_examples_to_features(eval_examples, label_list, args.max_seq_length, tokenizer)
     logger.info("***** Running evaluation *****")
@@ -639,6 +590,8 @@ def eval(args, processor, label_list, tokenizer, device, model):
     all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
     all_valid_ids = torch.tensor([f.valid_ids for f in eval_features], dtype=torch.long)
     all_lmask_ids = torch.tensor([f.label_mask for f in eval_features], dtype=torch.long)
+    # all_guids = torch.tensor([f.guid for f in eval_features], dtype=torch.long)
+    # all_guids = [f.guid for f in eval_features]
     eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids, all_valid_ids,
                               all_lmask_ids)
     # Run prediction for full data
@@ -679,27 +632,27 @@ def eval(args, processor, label_list, tokenizer, device, model):
                 else:
                     temp_1.append(label_map[label_ids[i][j]])
                     temp_2.append(label_map[logits[i][j]])
-            if temp_1 != temp_2:
-                # print(temp_1)
-                # print(tokenizer.convert_ids_to_tokens(input_ids[i].cpu().numpy()))
-                # print(temp_2)
-                # i = 0
-                words = tokenizer.convert_ids_to_tokens(input_ids[i].cpu().numpy())
-                k = 0
-                while words[k] != '[PAD]':
-                    # word, truth, pred = list(zip(words, temp_1, temp_2))[i]
-                    word = words[k]
-                    truth = temp_1[k]
-                    pred = temp_2[k]
+            if temp_1 != temp_2 and print_out:
+                bert_words = tokenizer.convert_ids_to_tokens(input_ids[i].cpu().numpy())
+                # print(bert_words)
+                print()
+                k, l = 1, 0
+                while bert_words[k] != '[SEP]':
+                    x = 1
+                    cur = bert_words[k]
+                    while bert_words[k + x][:2] == '##':
+                        cur += bert_words[k+x].replace('##', '')
+                        x += 1
+                    word = cur
+                    try:
+                        truth = temp_1[l]
+                        pred = temp_2[l]
 
-                # for word, truth, pred in zip(,
-                #                              temp_1,
-                #                              temp_2):
-                    print(word, truth, pred)
-                    k += 1
-                    # if word == '[PAD]':
-                    #     break
-                # print(tokenizer.ids_to_tokens())
+                        print(word, truth, pred)
+                    except Exception as e:
+                        print(e)
+                    k += x
+                    l += 1
 
     report = classification_report(y_true, y_pred, digits=4)
     logger.info("\n%s", report)

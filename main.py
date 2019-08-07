@@ -19,8 +19,7 @@ if __name__ == "__main__":
         pd = PreprocessData()
         pd.build_data()
         # pd.bs_parseer()
-
-        pd.tokenize_data(file=True)
+        pd.tokenize_data(file=False)
         pd.split_data()
 
     elif input_text == 'train':
@@ -36,6 +35,18 @@ if __name__ == "__main__":
         # data.generate_instance('test')
         # data.build_pretrain_emb()
         train(data)
+
+    elif input_text == 'test':
+        from train import load_model_decode
+        data = Data()
+        data.read_config(join(data_dir, 'train_config'))
+        data.load(data.dset_dir)
+        data.generate_instance('dev')
+        decode_results, pred_scores = load_model_decode(data, 'dev')
+        # if data.nbest and not data.sentence_classification:
+        #     data.write_nbest_decoded_results(decode_results, pred_scores, 'raw')
+        # else:
+        data.write_decoded_results(decode_results, 'dev')
 
     elif input_text == "tok":
         from preprocess.get_tokenizer import test_tok
