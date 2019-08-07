@@ -17,7 +17,7 @@ class PreprocessData:
     def __init__(self, ):
         # self.data_dir = "/Users/chin/PycharmProjects/EL/data"
         self.data_dir = join(os.getcwd(), "data")
-        self.processed_data_dir = join(os.getcwd(), 'processed_data', "data")
+        self.processed_data_dir = join(os.getcwd(), 'data', 'processed_data')
         self.corpus_dir = join(self.data_dir, "LDC2017E51_TAC_KBP_2017_Evaluation_Core_Source_Corpus/data")
         self.label_df = self._read_label()
 
